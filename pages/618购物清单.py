@@ -273,3 +273,149 @@ budget_summary = calculate_budget_summary(load_data())
 st.sidebar.metric("总预算", f"¥{budget_summary['total_budget']:.2f}")
 st.sidebar.metric("已花费", f"¥{budget_summary['spent']:.2f}")
 st.sidebar.metric("剩余预算", f"¥{budget_summary['remaining']:.2f}")
+
+tab1, tab2, tab3 = st.tabs(["📝 清单管理", "📊 统计分析", "📥 导出"])
+
+with tab1:
+    st.markdown("### 商品列表")
+    
+    @st.dialog("新增商品")
+    def add_item_dialog():
+        name = st.text_input("商品名称 *")
+        categories = load_categories()
+        category = st.selectbox("分类 *", categories)
+        col1, col2 = st.columns(2)
+        quantity = col1.number_input("数量 *", min_value=1, value=1)
+        unit = col2.text_input("单位", value="个")
+        budget_price = st.number_input("预算价格 *", min_value=0.0, step=0.01)
+        priority = st.selectbox("优先级 *", ["必须", "想买", "可选"])
+        platform = st.selectbox("购买平台", ["淘宝", "天猫", "京东", "拼多多", "其他"])
+        notes = st.text_area("备注")
+        
+        col1, col2 = st.columns(2)
+        if col1.button("保存", use_container_width=True):
+            if not name.strip():
+                st.error("商品名称不能为空")
+            else:
+                add_item(name, category, quantity, unit, budget_price, priority, platform, notes)
+                st.success("新增成功!")
+                st.rerun()
+        
+        if col2.button("取消", use_container_width=True):
+            st.rerun()
+    
+    if st.button("➕ 新增商品", use_container_width=True):
+        add_item_dialog()
+    
+    st.markdown("---")
+    
+    if not filtered_items:
+        st.info("暂无商品,请点击上方按钮新增")
+    else:
+        for item in filtered_items:
+            priority_emoji = {"必须": "🔴", "想买": "🟡", "可选": "⚪"}
+            status_emoji = {"待购买": "🛒", "已购买": "✅", "已取消": "❌"}
+            
+            with st.container():
+                cols = st.columns([4, 3, 3])
+                
+                with cols[0]:
+                    st.write(f"**{item['name']}**")
+                    st.caption(f"📦 {item['quantity']}{item['unit']} | 💰 ¥{item['budget_price']:.2f}")
+                    st.caption(f"📂 {item['category']} | 🏪 {item['platform']}")
+                
+                with cols[1]:
+                    st.write(f"{status_emoji.get(item['status'], '')} {item['status']}")
+                    st.write(f"{priority_emoji.get(item['priority'], '')} {item['priority']}")
+                
+                with cols[2]:
+                    c1, c2, c3 = st.columns(3)
+                    
+                    if c1.button("🔄", key=f"toggle_{item['id']}", help="切换状态"):
+                        toggle_status(item['id'])
+                        st.rerun()
+                    
+                    if c2.button("✏️", key=f"edit_{item['id']}", help="编辑"):
+                        st.session_state.edit_item_id = item['id']
+                        st.rerun()
+                    
+                    if c3.button("🗑️", key=f"delete_{item['id']}", help="删除"):
+                        st.session_state.delete_item_id = item['id']
+                        st.rerun()
+                
+                st.markdown("---")
+
+if "edit_item_id" in st.session_state:
+    item_to_edit = next((item for item in load_data() if item["id"] == st.session_state.edit_item_id), None)
+    
+    if item_to_edit:
+        @st.dialog("编辑商品")
+        def edit_item_dialog(item):
+            name = st.text_input("商品名称", value=item["name"])
+            categories = load_categories()
+            category_index = categories.index(item["category"]) if item["category"] in categories else 0
+            category = st.selectbox("分类", categories, index=category_index)
+            
+            col1, col2 = st.columns(2)
+            quantity = col1.number_input("数量", min_value=1, value=item["quantity"])
+            unit = col2.text_input("单位", value=item["unit"])
+            
+            budget_price = st.number_input("预算价格", min_value=0.0, value=item["budget_price"], step=0.01)
+            priority_index = ["必须", "想买", "可选"].index(item["priority"]) if item["priority"] in ["必须", "想买", "可选"] else 0
+            priority = st.selectbox("优先级", ["必须", "想买", "可选"], index=priority_index)
+            
+            platforms = ["淘宝", "天猫", "京东", "拼多多", "其他"]
+            platform_index = platforms.index(item["platform"]) if item["platform"] in platforms else 0
+            platform = st.selectbox("购买平台", platforms, index=platform_index)
+            
+            notes = st.text_area("备注", value=item.get("notes", ""))
+            
+            if item["status"] == "已购买":
+                actual_price = st.number_input("实际价格", min_value=0.0, value=item.get("actual_price", 0), step=0.01)
+            else:
+                actual_price = item.get("actual_price", 0)
+            
+            col1, col2 = st.columns(2)
+            if col1.button("保存修改", use_container_width=True):
+                update_item(
+                    item["id"],
+                    name=name,
+                    category=category,
+                    quantity=quantity,
+                    unit=unit,
+                    budget_price=budget_price,
+                    priority=priority,
+                    platform=platform,
+                    notes=notes,
+                    actual_price=actual_price
+                )
+                st.success("修改成功!")
+                del st.session_state.edit_item_id
+                st.rerun()
+            
+            if col2.button("取消", use_container_width=True):
+                del st.session_state.edit_item_id
+                st.rerun()
+        
+        edit_item_dialog(item_to_edit)
+
+if "delete_item_id" in st.session_state:
+    item_to_delete = next((item for item in load_data() if item["id"] == st.session_state.delete_item_id), None)
+    
+    if item_to_delete:
+        @st.dialog("确认删除")
+        def delete_item_dialog(item):
+            st.warning(f"⚠️ 定要删除商品 **{item['name']}** 吗? 删除后不可恢复!")
+            
+            col1, col2 = st.columns(2)
+            if col1.button("确认删除", use_container_width=True):
+                delete_item(item["id"])
+                st.success("删除成功!")
+                del st.session_state.delete_item_id
+                st.rerun()
+            
+            if col2.button("取消", use_container_width=True):
+                del st.session_state.delete_item_id
+                st.rerun()
+        
+        delete_item_dialog(item_to_delete)
