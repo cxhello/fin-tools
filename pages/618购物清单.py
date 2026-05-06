@@ -274,6 +274,42 @@ st.sidebar.metric("总预算", f"¥{budget_summary['total_budget']:.2f}")
 st.sidebar.metric("已花费", f"¥{budget_summary['spent']:.2f}")
 st.sidebar.metric("剩余预算", f"¥{budget_summary['remaining']:.2f}")
 
+st.sidebar.markdown("---")
+st.sidebar.header("📂 分类管理")
+
+@st.dialog("新增分类")
+def add_category_dialog():
+    new_category = st.text_input("分类名称")
+    
+    col1, col2 = st.columns(2)
+    if col1.button("保存", use_container_width=True):
+        if not new_category.strip():
+            st.error("分类名称不能为空")
+        else:
+            if add_category(new_category):
+                st.success("新增成功!")
+                st.rerun()
+            else:
+                st.warning("该分类已存在")
+    
+    if col2.button("取消", use_container_width=True):
+        st.rerun()
+
+if st.sidebar.button("➕ 新增分类", use_container_width=True):
+    add_category_dialog()
+
+categories = load_categories()
+for cat in categories:
+    cols = st.sidebar.columns([3, 1])
+    cols[0].write(f"• {cat}")
+    
+    if cols[1].button("🗑️", key=f"del_cat_{cat}", help="删除分类"):
+        if delete_category(cat):
+            st.success(f"已删除分类: {cat}")
+            st.rerun()
+        else:
+            st.error("该分类下有关联商品,无法删除")
+
 tab1, tab2, tab3 = st.tabs(["📝 清单管理", "📊 统计分析", "📥 导出"])
 
 with tab1:
