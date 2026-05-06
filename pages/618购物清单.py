@@ -419,3 +419,55 @@ if "delete_item_id" in st.session_state:
                 st.rerun()
         
         delete_item_dialog(item_to_delete)
+
+with tab2:
+    st.markdown("### 📊 统计分析")
+    
+    all_items = load_data()
+    
+    if not all_items:
+        st.info("暂无数据,请先添加商品")
+    else:
+        st.markdown("#### 💰 预算使用情况")
+        budget_summary = calculate_budget_summary(all_items)
+        
+        col1, col2, col3 = st.columns(3)
+        col1.metric("总预算", f"¥{budget_summary['total_budget']:.2f}")
+        col2.metric("已花费", f"¥{budget_summary['spent']:.2f}")
+        col3.metric("剩余预算", f"¥{budget_summary['remaining']:.2f}")
+        
+        if budget_summary['total_budget'] > 0:
+            progress = budget_summary['spent'] / budget_summary['total_budget']
+            st.progress(min(progress, 1.0))
+            st.caption(f"预算使用率: {progress*100:.1f}%")
+        
+        st.markdown("---")
+        
+        st.markdown("#### ✅ 购买完成率")
+        completion_rate = calculate_completion_rate(all_items)
+        st.metric("完成率", f"{completion_rate:.1f}%")
+        
+        st.markdown("---")
+        
+        st.markdown("#### 📂 按分类统计")
+        category_stats = calculate_category_stats(all_items)
+        
+        for category, stats in category_stats.items():
+            with st.expander(f"{category} ({stats['count']}件)"):
+                col1, col2, col3 = st.columns(3)
+                col1.metric("预算", f"¥{stats['budget']:.2f}")
+                col2.metric("已花费", f"¥{stats['spent']:.2f}")
+                col3.metric("商品数", stats['count'])
+        
+        st.markdown("---")
+        
+        st.markdown("#### 🎯 按优先级统计")
+        priority_stats = calculate_priority_stats(all_items)
+        
+        for priority, stats in priority_stats.items():
+            priority_emoji = {"必须": "🔴", "想买": "🟡", "可选": "⚪"}
+            with st.expander(f"{priority_emoji.get(priority, '')} {priority} ({stats['count']}件)"):
+                col1, col2, col3 = st.columns(3)
+                col1.metric("预算", f"¥{stats['budget']:.2f}")
+                col2.metric("已花费", f"¥{stats['spent']:.2f}")
+                col3.metric("商品数", stats['count'])
