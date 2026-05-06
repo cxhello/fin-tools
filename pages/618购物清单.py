@@ -140,3 +140,44 @@ def get_items(category=None, priority=None, status=None):
         items = [item for item in items if item["status"] == status]
     
     return items
+
+
+def load_categories():
+    """加载分类列表"""
+    if not os.path.exists(CATEGORIES_PATH):
+        return []
+    with open(CATEGORIES_PATH, "r", encoding="utf-8") as f:
+        data = json.load(f)
+        return data.get("categories", [])
+
+
+def save_categories(categories):
+    """保存分类列表"""
+    os.makedirs("config", exist_ok=True)
+    with open(CATEGORIES_PATH, "w", encoding="utf-8") as f:
+        json.dump({"categories": categories}, f, ensure_ascii=False, indent=2)
+
+
+def add_category(category_name):
+    """新增分类"""
+    categories = load_categories()
+    if category_name not in categories:
+        categories.append(category_name)
+        save_categories(categories)
+        return True
+    return False
+
+
+def delete_category(category_name):
+    """删除分类"""
+    items = load_data()
+    has_items = any(item["category"] == category_name for item in items)
+    if has_items:
+        return False
+    
+    categories = load_categories()
+    if category_name in categories:
+        categories.remove(category_name)
+        save_categories(categories)
+        return True
+    return False
