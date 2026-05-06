@@ -471,3 +471,47 @@ with tab2:
                 col1.metric("预算", f"¥{stats['budget']:.2f}")
                 col2.metric("已花费", f"¥{stats['spent']:.2f}")
                 col3.metric("商品数", stats['count'])
+
+with tab3:
+    st.markdown("### 📥 导出购物清单")
+    
+    all_items = load_data()
+    
+    if not all_items:
+        st.info("暂无数据,无法导出")
+    else:
+        st.write(f"当前清单共 **{len(all_items)}** 件商品")
+        
+        if filtered_items and len(filtered_items) != len(all_items):
+            st.write(f"筛选后共 **{len(filtered_items)}** 件商品")
+        
+        st.markdown("---")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### 导出全部商品")
+            excel_data = export_to_excel(all_items)
+            if excel_data:
+                st.download_button(
+                    label="📥 下载全部清单",
+                    data=excel_data,
+                    file_name=f"购物清单_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+        
+        with col2:
+            st.markdown("#### 导出筛选后商品")
+            if filtered_items and len(filtered_items) != len(all_items):
+                excel_data_filtered = export_to_excel(filtered_items)
+                if excel_data_filtered:
+                    st.download_button(
+                        label="📥 下载筛选清单",
+                        data=excel_data_filtered,
+                        file_name=f"购物清单_筛选_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
+                    )
+            else:
+                st.info("未应用筛选条件")
