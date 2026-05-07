@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 from datetime import datetime
 
-API_BASE_URL = st.secrets.get("api_url", "http://localhost:8080/api/db")
+API_BASE_URL = "https://api.test.cinta.team/litabasic/v1/db"
 
 
 def execute_query(sql, params=None):
